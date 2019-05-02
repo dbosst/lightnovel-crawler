@@ -24,6 +24,62 @@ class ConsoleBot:
         self.app.initialize()
 
         self.app.user_input = self.get_novel_url()
+        if isinstance(self.app.user_input, list):
+            urls = self.app.user_input
+            count = 0
+            allchapters = []
+            while len(urls) > 0:
+                url = urls.pop(0)
+                if not url.startswith('http'):
+                    continue
+                self.app.user_input = url
+                try:
+                    self.app.init_search()
+                except:
+                    display.url_not_recognized()
+                    continue
+                if not self.app.crawler:
+                    continue
+                if self.app.can_do('login'):
+                    self.app.login_data = self.get_login_info()
+                # end if
+                self.app.get_novel_info(getinfo=False)
+
+                args = get_args()
+                output_path = args.output_path
+                output_path = os.path.abspath(output_path)
+                if os.path.exists(output_path):
+                    if self.force_replace_old():
+                        shutil.rmtree(output_path, ignore_errors=True)
+                    # end if
+                # end if
+                os.makedirs(output_path, exist_ok=True)
+                self.app.output_path = output_path
+                count += 1
+                chapteritem = {'id': count, 'url': url, 'volume_title': '', 'title': url}
+                allchapters.append(chapteritem)
+                self.app.chapters = [chapteritem]
+
+                self.app.output_formats = self.get_output_formats()
+                self.app.pack_by_volume = self.should_pack_by_volume()
+
+                self.app.start_download()
+            # end while
+            self.app.chapters = allchapters
+            self.app.bind_books()
+
+            self.app.destroy()
+            display.app_complete()
+
+            if self.open_folder():
+                import pathlib
+                import webbrowser
+                url = pathlib.Path(self.app.output_path).as_uri()
+                webbrowser.open_new(url)
+            # end def
+            return
+        # end if
+
         try:
             self.app.init_search()
         except:
@@ -52,6 +108,7 @@ class ConsoleBot:
         self.app.pack_by_volume = self.should_pack_by_volume()
 
         self.app.start_download()
+
         self.app.bind_books()
 
         self.app.destroy()
@@ -119,6 +176,11 @@ class ConsoleBot:
         url = args.novel_page
         if url and url.startswith('http'):
             return url
+        # end if
+
+        urls = args.chapters
+        if args.single and args.output_path and urls and isinstance(urls, list) and len(urls) > 0:
+            return urls
         # end if
 
         try:

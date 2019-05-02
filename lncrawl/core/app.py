@@ -13,6 +13,7 @@ from ..spiders import crawler_list
 from .novel_search import search_novels
 from .downloader import download_chapters
 from .novel_info import format_chapters, format_volumes, save_metadata
+from datetime import datetime
 
 logger = logging.getLogger('APP')
 
@@ -113,7 +114,7 @@ class App:
         return prop_name in self.crawler.__class__.__dict__
     # end def
 
-    def get_novel_info(self):
+    def get_novel_info(self, getinfo=True):
         '''Requires: crawler, login_data'''
         '''Produces: output_path'''
         self.crawler.initialize()
@@ -124,7 +125,10 @@ class App:
         # end if
 
         print('Retrieving novel info...')
-        self.crawler.read_novel_info()
+        if getinfo:
+            self.crawler.read_novel_info()
+        else:
+            self.crawler.novel_title = datetime.today().strftime('%Y-%m-%d-%H:%M:%S')
         print('NOVEL: %s' % self.crawler.novel_title)
 
         format_volumes(self.crawler)
